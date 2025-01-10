@@ -2,9 +2,10 @@
 Simple to do list practice app
 
 Installation:
-git clone
-cd go-rest-crud-test
-go get
+1. `git clone https://github.com/tuhinrocks77/go-rest-crud-test.git`
+2. `cd go-rest-crud-test`
+3. `go get`
 
-Test-suite:
-go test .
+Testcases: To run testcases `go test`
+
+Server: To run server `go run .`
