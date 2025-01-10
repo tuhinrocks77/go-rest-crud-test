@@ -18,8 +18,13 @@
 # vendor/
 
 # Go workspace file
+go.sum
 go.work
 go.work.sum
 
 # env file
 .env
+
+# local SQLite dbs
+local_dummy.db
+test_.db
