@@ -32,7 +32,7 @@ func CreateTask(ctx *gin.Context) {
 	ctx.JSON(http.StatusCreated, newTask)
 }
 
-func FectchTask(ctx *gin.Context) {
+func FetchTask(ctx *gin.Context) {
 	id := ctx.Param("id")
 	Id, err := strconv.Atoi(id)
 	if err != nil {
@@ -55,6 +55,33 @@ func FectchTask(ctx *gin.Context) {
 			gin.H{"error": "Task not found"})
 		return
 	}
+	ctx.JSON(http.StatusOK, gin.H{"task": task})
+}
+
+func DeleteTask(ctx *gin.Context) {
+	id := ctx.Param("id")
+	Id, err := strconv.Atoi(id)
+	if err != nil {
+		ctx.JSON(http.StatusBadRequest,
+			gin.H{"error": "Invalid Id format"})
+		return
+	}
+	// TODO: make some common handler
+	db, err := DBConnection()
+	if err != nil {
+		ctx.JSON(http.StatusInternalServerError,
+			gin.H{"error": "Db connection failed."})
+		return
+	}
+	// var task = Task{ID: int64(Id)} TODO: FInd why this gives error
+	var task Task
+	result := db.Where("ID = ?", Id).First(&task)
+	if result.Error != nil {
+		ctx.JSON(http.StatusNotFound,
+			gin.H{"error": "Task not found"})
+		return
+	}
+	db.Delete(&task)
 	ctx.JSON(http.StatusOK, gin.H{"task": task})
 }
 

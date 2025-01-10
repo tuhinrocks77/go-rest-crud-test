@@ -13,7 +13,8 @@ func SetupRouter() *gin.Engine {
 	privateRoutes.Use(AuthMiddleware())
 	{
 		privateRoutes.POST("", CreateTask)
-		privateRoutes.GET("/:id", FectchTask)
+		privateRoutes.GET("/:id", FetchTask)
+		privateRoutes.DELETE("/:id", DeleteTask)
 	}
 
 	return router

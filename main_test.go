@@ -148,7 +148,7 @@ func CreateNTasks(n int) {
 	}
 }
 
-func TestFectchTask(t *testing.T) {
+func TestFetchTask(t *testing.T) {
 	DeleteTestDb()
 	CreateNTasks(3)
 	router := SetupRouter()
@@ -187,6 +187,54 @@ func TestFectchTask(t *testing.T) {
 		respData := StringToJsonObj(recorder.Body.String())
 		respTaskId := respData["task"].(map[string]interface{})["ID"].(float64)
 		assert.Equal(t, int(respTaskId), 2, testErrStr)
+	})
+
+	DeleteTestDb()
+}
+
+func TestDeleteTask(t *testing.T) {
+	DeleteTestDb()
+	CreateNTasks(3)
+	router := SetupRouter()
+	testErrStr := "Task.ID type validation failed."
+	token := MakeDummyUserToken()
+	recorder := httptest.NewRecorder()
+	req := httptest.NewRequest("DELETE", "/tasks/abc", nil)
+	req.Header.Add("Authorization", token)
+	router.ServeHTTP(recorder, req)
+	t.Run(testErrStr, func(t *testing.T) {
+		assert.Equal(t, 400, recorder.Code, testErrStr)
+		respData := StringToJsonObj(recorder.Body.String())
+		assert.Equal(
+			t, respData["error"].(string), "Invalid Id format", testErrStr)
+	})
+
+	testErrStr = "Task.ID Not found."
+	recorder = httptest.NewRecorder()
+	req = httptest.NewRequest("DELETE", "/tasks/100", nil)
+	req.Header.Add("Authorization", token)
+	router.ServeHTTP(recorder, req)
+	t.Run(testErrStr, func(t *testing.T) {
+		assert.Equal(t, 404, recorder.Code, testErrStr)
+		respData := StringToJsonObj(recorder.Body.String())
+		assert.Equal(
+			t, respData["error"].(string), "Task not found", testErrStr)
+	})
+
+	testErrStr = "Valid Task  Not found."
+	recorder = httptest.NewRecorder()
+	req = httptest.NewRequest("DELETE", "/tasks/2", nil)
+	req.Header.Add("Authorization", token)
+	router.ServeHTTP(recorder, req)
+	t.Run(testErrStr, func(t *testing.T) {
+		assert.Equal(t, 200, recorder.Code, testErrStr)
+		respData := StringToJsonObj(recorder.Body.String())
+		respTaskId := int(respData["task"].(map[string]interface{})["ID"].(float64))
+		assert.Equal(t, respTaskId, 2, testErrStr)
+		db, _ := DBConnection()
+		var task Task
+		result := db.Where("ID = ?", respTaskId).First(&task)
+		assert.NotNil(t, result.Error)
 	})
 
 	DeleteTestDb()
