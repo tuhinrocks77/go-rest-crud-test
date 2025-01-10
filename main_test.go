@@ -7,6 +7,7 @@ import (
 	"os"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 )
@@ -187,6 +188,137 @@ func TestFetchTask(t *testing.T) {
 		respData := StringToJsonObj(recorder.Body.String())
 		respTaskId := respData["task"].(map[string]interface{})["ID"].(float64)
 		assert.Equal(t, int(respTaskId), 2, testErrStr)
+	})
+
+	DeleteTestDb()
+}
+
+func TestUpdateTask(t *testing.T) {
+	DeleteTestDb()
+	CreateNTasks(3)
+	router := SetupRouter()
+	testErrStr := "Task.ID type validation failed."
+	token := MakeDummyUserToken()
+	recorder := httptest.NewRecorder()
+	payloadStr := "{}"
+	req := httptest.NewRequest("PUT", "/tasks/abc", strings.NewReader(payloadStr))
+	req.Header.Add("Authorization", token)
+	router.ServeHTTP(recorder, req)
+	t.Run(testErrStr, func(t *testing.T) {
+		assert.Equal(t, 400, recorder.Code, testErrStr)
+		respData := StringToJsonObj(recorder.Body.String())
+		assert.Equal(
+			t, respData["error"].(string), "Invalid Id format", testErrStr)
+	})
+
+	testErrStr = "Task.ID Not found."
+	recorder = httptest.NewRecorder()
+	req = httptest.NewRequest("PUT", "/tasks/100", strings.NewReader(payloadStr))
+	req.Header.Add("Authorization", token)
+	router.ServeHTTP(recorder, req)
+	t.Run(testErrStr, func(t *testing.T) {
+		assert.Equal(t, 404, recorder.Code, testErrStr)
+		respData := StringToJsonObj(recorder.Body.String())
+		assert.Equal(
+			t, respData["error"].(string), "Task not found", testErrStr)
+	})
+
+	testErrStr = "Valid Task  Not found."
+	recorder = httptest.NewRecorder()
+	req = httptest.NewRequest("PUT", "/tasks/2", strings.NewReader(payloadStr))
+	req.Header.Add("Authorization", token)
+	router.ServeHTTP(recorder, req)
+	t.Run(testErrStr, func(t *testing.T) {
+		assert.Equal(t, 400, recorder.Code, testErrStr)
+		respData := StringToJsonObj(recorder.Body.String())
+		assert.Equal(t, respData["error"].(string), "Empty payload supplied", testErrStr)
+	})
+
+	testErrStr = "Title data type validation failed."
+	payloadStr = `{"title": 123}`
+	recorder = httptest.NewRecorder()
+	req = httptest.NewRequest("PUT", "/tasks/2", strings.NewReader(payloadStr))
+	req.Header.Add("Authorization", token)
+	router.ServeHTTP(recorder, req)
+	t.Run(testErrStr, func(t *testing.T) {
+		assert.Equal(t, 400, recorder.Code, testErrStr)
+		respData := StringToJsonObj(recorder.Body.String())
+		assert.Contains(
+			t, respData["error"].(string), "UpdateTaskInput.title of type string", testErrStr)
+	})
+
+	testErrStr = "Description data type validation failed."
+	payloadStr = `{"description": 123}`
+	recorder = httptest.NewRecorder()
+	req = httptest.NewRequest("PUT", "/tasks/2", strings.NewReader(payloadStr))
+	req.Header.Add("Authorization", token)
+	router.ServeHTTP(recorder, req)
+	t.Run(testErrStr, func(t *testing.T) {
+		assert.Equal(t, 400, recorder.Code, testErrStr)
+		respData := StringToJsonObj(recorder.Body.String())
+		assert.Contains(
+			t, respData["error"].(string),
+			"UpdateTaskInput.description of type string", testErrStr)
+	})
+
+	testErrStr = "Status data type validation failed."
+	payloadStr = `{"description": "123", "status": 123}`
+	recorder = httptest.NewRecorder()
+	req = httptest.NewRequest("PUT", "/tasks/2", strings.NewReader(payloadStr))
+	req.Header.Add("Authorization", token)
+	router.ServeHTTP(recorder, req)
+	t.Run(testErrStr, func(t *testing.T) {
+		assert.Equal(t, 400, recorder.Code, testErrStr)
+		respData := StringToJsonObj(recorder.Body.String())
+		assert.Contains(
+			t, respData["error"].(string),
+			"UpdateTaskInput.status of type main.Status", testErrStr)
+	})
+
+	testErrStr = "Invalid status validation failed."
+	payloadStr = `{"status": "123"}`
+	recorder = httptest.NewRecorder()
+	req = httptest.NewRequest("PUT", "/tasks/2", strings.NewReader(payloadStr))
+	req.Header.Add("Authorization", token)
+	router.ServeHTTP(recorder, req)
+	t.Run(testErrStr, func(t *testing.T) {
+		assert.Equal(t, 400, recorder.Code, testErrStr)
+		respData := StringToJsonObj(recorder.Body.String())
+		assert.Contains(
+			t, respData["error"].(string),
+			"Invalid status supplied", testErrStr)
+	})
+
+	testErrStr = "Non update failed."
+	time.Sleep(1 * time.Second) // Should have made micro seconds timestamp
+	payloadStr = `{"status": "pending"}`
+	recorder = httptest.NewRecorder()
+	req = httptest.NewRequest("PUT", "/tasks/2", strings.NewReader(payloadStr))
+	req.Header.Add("Authorization", token)
+	router.ServeHTTP(recorder, req)
+	t.Run(testErrStr, func(t *testing.T) {
+		assert.Equal(t, 200, recorder.Code, testErrStr)
+		db, _ := DBConnection()
+		var task Task
+		db.Where("ID = ?", 2).First(&task)
+		assert.Equal(t, task.Status, Pending)
+		assert.Equal(t, task.CreatedAt, task.UpdatedAt)
+	})
+
+	testErrStr = "Update failed."
+	time.Sleep(1 * time.Second)
+	payloadStr = `{"status": "in-progress"}`
+	recorder = httptest.NewRecorder()
+	req = httptest.NewRequest("PUT", "/tasks/2", strings.NewReader(payloadStr))
+	req.Header.Add("Authorization", token)
+	router.ServeHTTP(recorder, req)
+	t.Run(testErrStr, func(t *testing.T) {
+		assert.Equal(t, 200, recorder.Code, testErrStr)
+		db, _ := DBConnection()
+		var task Task
+		db.Where("ID = ?", 2).First(&task)
+		assert.Equal(t, task.Status, InProgress)
+		assert.Greater(t, task.UpdatedAt, task.CreatedAt)
 	})
 
 	DeleteTestDb()

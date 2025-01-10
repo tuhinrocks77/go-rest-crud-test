@@ -14,6 +14,7 @@ func SetupRouter() *gin.Engine {
 	{
 		privateRoutes.POST("", CreateTask)
 		privateRoutes.GET("/:id", FetchTask)
+		privateRoutes.PUT("/:id", UpdateTask)
 		privateRoutes.DELETE("/:id", DeleteTask)
 	}
 
