@@ -46,11 +46,22 @@ func TestCreateTask(t *testing.T) {
 	DeleteTestDb()
 	router := SetupRouter()
 
-	testErrStr := "Empty paylaod not allowed."
+	testErrStr := "Must pass valid token"
 	payloadStr := "{}"
 	recorder := httptest.NewRecorder()
 	router.ServeHTTP(recorder, httptest.NewRequest(
 		"POST", "/tasks", strings.NewReader(payloadStr)))
+	t.Run(testErrStr, func(t *testing.T) {
+		assert.Equal(t, 401, recorder.Code, testErrStr)
+	})
+
+	testErrStr = "Empty paylaod not allowed."
+	token := MakeDummyUserToken()
+	recorder = httptest.NewRecorder()
+	req := httptest.NewRequest(
+		"POST", "/tasks", strings.NewReader(payloadStr))
+	req.Header.Add("Authorization", token)
+	router.ServeHTTP(recorder, req)
 	t.Run(testErrStr, func(t *testing.T) {
 		assert.Equal(t, 400, recorder.Code, testErrStr)
 		respData := StringToJsonObj(recorder.Body.String())
@@ -61,8 +72,10 @@ func TestCreateTask(t *testing.T) {
 	testErrStr = "Incorrect data type for Title."
 	payloadStr = `{"title": 123}`
 	recorder = httptest.NewRecorder()
-	router.ServeHTTP(recorder, httptest.NewRequest(
-		"POST", "/tasks", strings.NewReader(payloadStr)))
+	// TODO: Investigate if there is a client to set token once like django
+	req = httptest.NewRequest("POST", "/tasks", strings.NewReader(payloadStr))
+	req.Header.Add("Authorization", token)
+	router.ServeHTTP(recorder, req)
 	t.Run(testErrStr, func(t *testing.T) {
 		assert.Equal(t, 400, recorder.Code, testErrStr)
 		respData := StringToJsonObj(recorder.Body.String())
@@ -75,8 +88,9 @@ func TestCreateTask(t *testing.T) {
 	testErrStr = "Incorrect data type for Description."
 	payloadStr = `{"description": 123}`
 	recorder = httptest.NewRecorder()
-	router.ServeHTTP(recorder, httptest.NewRequest(
-		"POST", "/tasks", strings.NewReader(payloadStr)))
+	req = httptest.NewRequest("POST", "/tasks", strings.NewReader(payloadStr))
+	req.Header.Add("Authorization", token)
+	router.ServeHTTP(recorder, req)
 	t.Run(testErrStr, func(t *testing.T) {
 		assert.Equal(t, 400, recorder.Code, testErrStr)
 		respData := StringToJsonObj(recorder.Body.String())
@@ -89,8 +103,9 @@ func TestCreateTask(t *testing.T) {
 	testErrStr = "Incorrect data type for Description."
 	payloadStr = `{"description": 123}`
 	recorder = httptest.NewRecorder()
-	router.ServeHTTP(recorder, httptest.NewRequest(
-		"POST", "/tasks", strings.NewReader(payloadStr)))
+	req = httptest.NewRequest("POST", "/tasks", strings.NewReader(payloadStr))
+	req.Header.Add("Authorization", token)
+	router.ServeHTTP(recorder, req)
 	t.Run(testErrStr, func(t *testing.T) {
 		assert.Equal(t, 400, recorder.Code, testErrStr)
 		respData := StringToJsonObj(recorder.Body.String())
@@ -105,8 +120,9 @@ func TestCreateTask(t *testing.T) {
 	testDesc := RandomString(20)
 	payloadStr = `{"title": "` + testTitle + `", "description": "` + testDesc + `"}`
 	recorder = httptest.NewRecorder()
-	router.ServeHTTP(recorder, httptest.NewRequest(
-		"POST", "/tasks", strings.NewReader(payloadStr)))
+	req = httptest.NewRequest("POST", "/tasks", strings.NewReader(payloadStr))
+	req.Header.Add("Authorization", token)
+	router.ServeHTTP(recorder, req)
 	t.Run(testErrStr, func(t *testing.T) {
 		assert.Equal(t, 201, recorder.Code, testErrStr)
 		respData := StringToJsonObj(recorder.Body.String())

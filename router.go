@@ -4,8 +4,16 @@ import "github.com/gin-gonic/gin"
 
 func SetupRouter() *gin.Engine {
 	router := gin.Default()
-	router.POST("/tasks", CreateTask)
-	router.GET("/public/tasks", ListTasks)
+	publicRoutes := router.Group("/public")
+	{
+		publicRoutes.GET("/tasks", ListTasks)
+	}
+
+	privateRoutes := router.Group("/tasks")
+	privateRoutes.Use(AuthMiddleware())
+	{
+		privateRoutes.POST("", CreateTask)
+	}
 
 	return router
 }
