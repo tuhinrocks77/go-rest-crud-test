@@ -137,10 +137,64 @@ func TestCreateTask(t *testing.T) {
 	DeleteTestDb()
 }
 
+func CreateNTasks(n int) {
+	// var tasks = []*Task{}
+	db, _ := DBConnection()
+	for i := 0; i < n; i++ {
+		newTask := Task{Title: RandomString(10), Description: RandomString(20), Status: Pending}
+		// tasks := append(tasks, &newTask)
+		// TODO: replace with bulk create
+		db.Create(&newTask)
+	}
+}
+
+func TestFectchTask(t *testing.T) {
+	DeleteTestDb()
+	CreateNTasks(3)
+	router := SetupRouter()
+	testErrStr := "Task.ID type validation failed."
+	token := MakeDummyUserToken()
+	recorder := httptest.NewRecorder()
+	req := httptest.NewRequest("GET", "/tasks/abc", nil)
+	req.Header.Add("Authorization", token)
+	router.ServeHTTP(recorder, req)
+	t.Run(testErrStr, func(t *testing.T) {
+		assert.Equal(t, 400, recorder.Code, testErrStr)
+		respData := StringToJsonObj(recorder.Body.String())
+		assert.Equal(
+			t, respData["error"].(string), "Invalid Id format", testErrStr)
+	})
+
+	testErrStr = "Task.ID Not found."
+	recorder = httptest.NewRecorder()
+	req = httptest.NewRequest("GET", "/tasks/100", nil)
+	req.Header.Add("Authorization", token)
+	router.ServeHTTP(recorder, req)
+	t.Run(testErrStr, func(t *testing.T) {
+		assert.Equal(t, 404, recorder.Code, testErrStr)
+		respData := StringToJsonObj(recorder.Body.String())
+		assert.Equal(
+			t, respData["error"].(string), "Task not found", testErrStr)
+	})
+
+	testErrStr = "Valid Task  Not found."
+	recorder = httptest.NewRecorder()
+	req = httptest.NewRequest("GET", "/tasks/2", nil)
+	req.Header.Add("Authorization", token)
+	router.ServeHTTP(recorder, req)
+	t.Run(testErrStr, func(t *testing.T) {
+		assert.Equal(t, 200, recorder.Code, testErrStr)
+		respData := StringToJsonObj(recorder.Body.String())
+		respTaskId := respData["task"].(map[string]interface{})["ID"].(float64)
+		assert.Equal(t, int(respTaskId), 2, testErrStr)
+	})
+
+	DeleteTestDb()
+}
+
 func TestListTasks(t *testing.T) {
 	DeleteTestDb()
 	router := SetupRouter()
-
 	testErrStr := "Checking list api with no data failed."
 	recorder := httptest.NewRecorder()
 	router.ServeHTTP(recorder, httptest.NewRequest(
@@ -152,14 +206,7 @@ func TestListTasks(t *testing.T) {
 			t, respData[`tasks`], 0, testErrStr)
 	})
 
-	// var tasks = []*Task{}
-	db, _ := DBConnection()
-	for i := 0; i < 3; i++ {
-		newTask := Task{Title: RandomString(10), Description: RandomString(20), Status: Pending}
-		// tasks := append(tasks, &newTask)
-		// TODO: replace with bulk create
-		db.Create(&newTask)
-	}
+	CreateNTasks(3)
 	testErrStr = "Checking list api with 3 tasks failed."
 	recorder = httptest.NewRecorder()
 	router.ServeHTTP(recorder, httptest.NewRequest(
